@@ -32,8 +32,21 @@ export function isKey(value: string): value is Key {
 	return KEY_SET.has(value);
 }
 
+const MODIFIER_KEYS: ReadonlySet<string> = new Set([
+	"ctrl", "alt", "shift", "ctrl+shift", "alt+shift", "ctrl+alt", "ctrl+alt+shift"
+]);
+
+export function isShortcutKey(value: string): value is ShortcutKey {
+	const parts = value.split("+");
+	if (parts.length === 1) {
+		return isKey(parts[0]);
+	}
+	const key = parts[parts.length - 1];
+	const modifier = parts.slice(0, -1).join("+");
+	return MODIFIER_KEYS.has(modifier) && isKey(key);
+}
+
 export type ModifierBasedShortcutKey = `${ModifierKeys}+${Key}`;
-// Singular keybindings (these will be disabled when an input-ish area has been focused)
 export type SingleCharacterShortcutKey = `${Key}`;
 
 export type ShortcutKey = ModifierBasedShortcutKey | SingleCharacterShortcutKey;
