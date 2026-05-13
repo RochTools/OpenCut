@@ -1,124 +1,59 @@
-import type { ElementType } from "react";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import {
-	ArrowRightDoubleIcon,
-	ClosedCaptionIcon,
-	Folder03Icon,
-	Happy01Icon,
-	HeadphonesIcon,
-	MagicWand05Icon,
-	TextIcon,
-	Settings01Icon,
-	SlidersHorizontalIcon,
-	ColorsIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+"use client";
 
-export const TAB_KEYS = [
-	"media",
-	"sounds",
-	"text",
-	"stickers",
-	"effects",
-	"transitions",
-	"captions",
-	"adjustment",
-	"settings",
-] as const;
+import { Separator } from "@/components/ui/separator";
+import { type Tab, useAssetsPanelStore } from "@/components/editor/panels/assets/assets-panel-store";
+import { TabBar } from "./tabbar";
+import { Captions } from "@/subtitles/components/assets-view";
+import { MediaView } from "./views/assets";
+import { SettingsView } from "./views/settings";
+import { SoundsView } from "@/sounds/components/assets-view";
+import { StickersView } from "@/stickers/components/assets-view";
+import { TextView } from "@/text/components/assets-view";
+import { EffectsView } from "@/effects/components/assets-view";
 
-export type Tab = (typeof TAB_KEYS)[number];
-
-const createHugeiconsIcon =
-	({ icon }: { icon: IconSvgElement }) =>
-	({ className }: { className?: string }) => (
-		<HugeiconsIcon icon={icon} className={className} />
-	);
-
-export const tabs = {
-	media: {
-		icon: createHugeiconsIcon({ icon: Folder03Icon }),
-		label: "Media",
-	},
-	sounds: {
-		icon: createHugeiconsIcon({ icon: HeadphonesIcon }),
-		label: "Sounds",
-	},
-	text: {
-		icon: createHugeiconsIcon({ icon: TextIcon }),
-		label: "Text",
-	},
-	stickers: {
-		icon: createHugeiconsIcon({ icon: Happy01Icon }),
-		label: "Stickers",
-	},
-	effects: {
-		icon: createHugeiconsIcon({ icon: MagicWand05Icon }),
-		label: "Effects",
-	},
-	transitions: {
-		icon: createHugeiconsIcon({ icon: ArrowRightDoubleIcon }),
-		label: "Transitions",
-	},
-	captions: {
-		icon: createHugeiconsIcon({ icon: ClosedCaptionIcon }),
-		label: "Captions",
-	},
-	adjustment: {
-		icon: createHugeiconsIcon({ icon: SlidersHorizontalIcon }),
-		label: "Adjustment",
-	},
-	settings: {
-		icon: createHugeiconsIcon({ icon: Settings01Icon }),
-		label: "Settings",
-	},
-} satisfies Record<
-	Tab,
-	{ icon: ElementType<{ className?: string }>; label: string }
->;
-
-export type MediaViewMode = "grid" | "list";
-export type MediaSortKey = "name" | "type" | "duration" | "size";
-export type MediaSortOrder = "asc" | "desc";
-
-interface AssetsPanelStore {
-	activeTab: Tab;
-	setActiveTab: (tab: Tab) => void;
-	highlightMediaId: string | null;
-	requestRevealMedia: (mediaId: string) => void;
-	clearHighlight: () => void;
-
-	/* Media */
-	mediaViewMode: MediaViewMode;
-	setMediaViewMode: (mode: MediaViewMode) => void;
-	mediaSortBy: MediaSortKey;
-	mediaSortOrder: MediaSortOrder;
-	setMediaSort: (args: { key: MediaSortKey; order: MediaSortOrder }) => void;
+interface AssetsPanelProps {
+  /**
+   * موبائل layout میں sidebar چھپا دو —
+   * bottom tab bar پہلے سے tab control کرتی ہے
+   */
+  hideSidebar?: boolean;
 }
 
-export const useAssetsPanelStore = create<AssetsPanelStore>()(
-	persist(
-		(set) => ({
-			activeTab: "media",
-			setActiveTab: (tab) => set({ activeTab: tab }),
-			highlightMediaId: null,
-			requestRevealMedia: (mediaId) =>
-				set({ activeTab: "media", highlightMediaId: mediaId }),
-			clearHighlight: () => set({ highlightMediaId: null }),
-			mediaViewMode: "grid",
-			setMediaViewMode: (mode) => set({ mediaViewMode: mode }),
-			mediaSortBy: "name",
-			mediaSortOrder: "asc",
-			setMediaSort: ({ key, order }) =>
-				set({ mediaSortBy: key, mediaSortOrder: order }),
-		}),
-		{
-			name: "assets-panel",
-			partialize: (state) => ({
-				mediaViewMode: state.mediaViewMode,
-				mediaSortBy: state.mediaSortBy,
-				mediaSortOrder: state.mediaSortOrder,
-			}),
-		},
-	),
-);
+export function AssetsPanel({ hideSidebar = false }: AssetsPanelProps) {
+  const { activeTab } = useAssetsPanelStore();
+
+  const viewMap: Record<Tab, React.ReactNode> = {
+    media:       <MediaView />,
+    sounds:      <SoundsView />,
+    text:        <TextView />,
+    stickers:    <StickersView />,
+    effects:     <EffectsView />,
+    transitions: (
+      <div className="text-muted-foreground p-4 text-sm">
+        Transitions view coming soon…
+      </div>
+    ),
+    captions:    <Captions />,
+    adjustment:  (
+      <div className="text-muted-foreground p-4 text-sm">
+        Adjustment view coming soon…
+      </div>
+    ),
+    settings:    <SettingsView />,
+  };
+
+  return (
+    <div className="panel bg-background flex h-full rounded-sm border overflow-hidden">
+      {/* Desktop پر sidebar ، موبائل پر hidden */}
+      {!hideSidebar && (
+        <>
+          <TabBar />
+          <Separator orientation="vertical" />
+        </>
+      )}
+      <div className="flex-1 overflow-hidden overflow-y-auto">
+        {viewMap[activeTab]}
+      </div>
+    </div>
+  );
+}
