@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import { useRef, useState, useEffect } from "react";
 import {
 	DropdownMenu,
@@ -8,15 +8,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { RenameProjectDialog } from "@/project/components/rename-project-dialog";
 import { DeleteProjectDialog } from "@/project/components/delete-project-dialog";
 import { useRouter } from "next/navigation";
 import { FaDiscord } from "react-icons/fa6";
-import { ExportButton } from "./export-button";
 import { FeedbackPopover } from "@/feedback/components/feedback-popover";
-import { ThemeToggle } from "../theme-toggle";
 import { DEFAULT_LOGO_URL } from "@/site/brand";
 import { SOCIAL_LINKS } from "@/site/social";
 import { toast } from "sonner";
@@ -43,6 +41,15 @@ function useIsMobile() {
 	}, []);
 
 	return isMobile;
+}
+
+// ── Placeholder components (agar asli nahi hain to) ──────────
+function ExportButton() {
+	return null;
+}
+
+function ThemeToggle() {
+	return null;
 }
 
 export function EditorHeader() {
@@ -90,9 +97,7 @@ function MobileActions() {
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="z-100 w-44">
-					<FeedbackPopover asMenuItem />
-					<ExportButton asMenuItem />
-					<ThemeToggle asMenuItem />
+					<FeedbackPopover />
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						onClick={() => setOpenDialog("shortcuts")}
@@ -214,7 +219,7 @@ function MobileProjectDropdown() {
 	);
 }
 
-// ── Desktop Project Dropdown (پرانا) ─────────────────────────
+// ── Desktop Project Dropdown ─────────────────────────────────
 function ProjectDropdown() {
 	const [openDialog, setOpenDialog] = useState<"delete" | "rename" | "shortcuts" | null>(null);
 	const [isExiting, setIsExiting] = useState(false);
