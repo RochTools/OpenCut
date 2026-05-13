@@ -11,34 +11,49 @@ import { StickersView } from "@/stickers/components/assets-view";
 import { TextView } from "@/text/components/assets-view";
 import { EffectsView } from "@/effects/components/assets-view";
 
-export function AssetsPanel() {
-	const { activeTab } = useAssetsPanelStore();
+interface AssetsPanelProps {
+  /**
+   * موبائل layout میں sidebar چھپا دو —
+   * bottom tab bar پہلے سے tab control کرتی ہے
+   */
+  hideSidebar?: boolean;
+}
 
-	const viewMap: Record<Tab, React.ReactNode> = {
-		media: <MediaView />,
-		sounds: <SoundsView />,
-		text: <TextView />,
-		stickers: <StickersView />,
-		effects: <EffectsView />,
-		transitions: (
-			<div className="text-muted-foreground p-4">
-				Transitions view coming soon...
-			</div>
-		),
-		captions: <Captions />,
-		adjustment: (
-			<div className="text-muted-foreground p-4">
-				Adjustment view coming soon...
-			</div>
-		),
-		settings: <SettingsView />,
-	};
+export function AssetsPanel({ hideSidebar = false }: AssetsPanelProps) {
+  const { activeTab } = useAssetsPanelStore();
 
-	return (
-		<div className="panel bg-background flex h-full rounded-sm border overflow-hidden">
-			<TabBar />
-			<Separator orientation="vertical" />
-			<div className="flex-1 overflow-hidden">{viewMap[activeTab]}</div>
-		</div>
-	);
+  const viewMap: Record<Tab, React.ReactNode> = {
+    media:       <MediaView />,
+    sounds:      <SoundsView />,
+    text:        <TextView />,
+    stickers:    <StickersView />,
+    effects:     <EffectsView />,
+    transitions: (
+      <div className="text-muted-foreground p-4 text-sm">
+        Transitions view coming soon…
+      </div>
+    ),
+    captions:    <Captions />,
+    adjustment:  (
+      <div className="text-muted-foreground p-4 text-sm">
+        Adjustment view coming soon…
+      </div>
+    ),
+    settings:    <SettingsView />,
+  };
+
+  return (
+    <div className="panel bg-background flex h-full rounded-sm border overflow-hidden">
+      {/* Desktop پر sidebar ، موبائل پر hidden */}
+      {!hideSidebar && (
+        <>
+          <TabBar />
+          <Separator orientation="vertical" />
+        </>
+      )}
+      <div className="flex-1 overflow-hidden overflow-y-auto">
+        {viewMap[activeTab]}
+      </div>
+    </div>
+  );
 }
