@@ -1,198 +1,242 @@
 "use client";
 
-import { useState } from "react";
+import { Button } from "../ui/button";
+import { useRef, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import Link from "next/link";
-import { motion } from "motion/react";
-import { Button } from "./ui/button";
-import { ArrowRight } from "lucide-react";
-import Image from "next/image";
-import { ThemeToggle } from "./theme-toggle";
-import {
-	Copy01Icon,
-	Download01Icon,
-	GithubIcon,
-	LinkSquare02Icon,
-	Menu02Icon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { cn } from "@/utils/ui";
-import { DEFAULT_LOGO_URL, SITE_URL } from "@/site/brand";
+import { RenameProjectDialog } from "@/project/components/rename-project-dialog";
+import { DeleteProjectDialog } from "@/project/components/delete-project-dialog";
+import { useRouter } from "next/navigation";
+import { FaDiscord } from "react-icons/fa6";
+import { ExportButton } from "./export-button";
+import { FeedbackPopover } from "@/feedback/components/feedback-popover";
+import { ThemeToggle } from "../theme-toggle";
 import { SOCIAL_LINKS } from "@/site/social";
-import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuTrigger,
-} from "./ui/context-menu";
+import { toast } from "sonner";
+import { useEditor } from "@/editor/use-editor";
+import { CommandIcon, Logout05Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ShortcutsDialog } from "@/actions/components/shortcuts-dialog";
+import { cn } from "@/utils/ui";
 
-export function Header() {
-	const [isMenuOpen, setIsMenuOpen] = useState(false);
-	const closeMenu = () => setIsMenuOpen(false);
+export function EditorHeader() {
+  return (
+    <header className="bg-background flex h-[3.4rem] items-center justify-between px-3 pt-0.5 shrink-0">
+      {/* ── بائیں طرف: Logo + Project Name ─────────────── */}
+      <div className="flex items-center gap-1 min-w-0">
+        <ProjectDropdown />
+        {/* KokoCut logo text — موبائل پر بھی دکھے */}
+        <span className="font-extrabold text-[1.1rem] tracking-tight text-[hsl(210,100%,60%)] select-none hidden sm:block">
+          koko<span className="text-foreground">cut</span>
+        </span>
+        {/* موبائل پر چھوٹا */}
+        <span className="font-extrabold text-[0.95rem] tracking-tight text-[hsl(210,100%,60%)] select-none sm:hidden">
+          koko<span className="text-foreground">cut</span>
+        </span>
+        <EditableProjectName />
+      </div>
 
-	const links = [
-		{
-			label: "Roadmap",
-			href: "/roadmap",
-		},
-		{
-			label: "Contributors",
-			href: "/contributors",
-		},
-		{
-			label: "Sponsors",
-			href: "/sponsors",
-		},
-		{
-			label: "Blog",
-			href: "/blog",
-		},
-	];
+      {/* ── دائیں طرف: actions ──────────────────────────── */}
+      <nav className="flex items-center gap-1 shrink-0">
+        {/* Feedback صرف desktop پر */}
+        <span className="hidden md:block">
+          <FeedbackPopover />
+        </span>
+        <ExportButton />
+        {/* Theme toggle صرف desktop پر */}
+        <span className="hidden md:block">
+          <ThemeToggle />
+        </span>
+      </nav>
+    </header>
+  );
+}
 
-	return (
-		<header className="bg-background shadow-background/85 sticky top-0 z-10 shadow-[0_30px_35px_15px_rgba(0,0,0,1)]">
-			<div className="relative flex w-full items-center justify-between px-6 pt-4">
-				<div className="relative z-10 flex items-center gap-6">
-					<ContextMenu>
-						<ContextMenuTrigger asChild>
-							<Link href="/" className="flex items-center gap-3">
-								<Image
-									src={DEFAULT_LOGO_URL}
-									alt="OpenCut Logo"
-									className="invert dark:invert-0"
-									width={32}
-									height={32}
-								/>
-							</Link>
-						</ContextMenuTrigger>
-						<ContextMenuContent>
-							<ContextMenuItem
-								onClick={async () => {
-									const res = await fetch(DEFAULT_LOGO_URL);
-									const svg = await res.text();
-									await navigator.clipboard.writeText(svg);
-								}}
-							>
-								<HugeiconsIcon icon={Copy01Icon} />
-								Copy SVG
-							</ContextMenuItem>
-							<ContextMenuItem
-								onClick={() => {
-									const a = document.createElement("a");
-									a.href = DEFAULT_LOGO_URL;
-									a.download = "opencut-logo.svg";
-									a.click();
-								}}
-							>
-								<HugeiconsIcon icon={Download01Icon} />
-								Download SVG
-							</ContextMenuItem>
-							<Link href="/brand">
-								<ContextMenuItem>
-									<HugeiconsIcon icon={LinkSquare02Icon} />
-									Brand assets
-								</ContextMenuItem>
-							</Link>
-						</ContextMenuContent>
-					</ContextMenu>
+function ProjectDropdown() {
+  const [openDialog, setOpenDialog] = useState<
+    "delete" | "rename" | "shortcuts" | null
+  >(null);
+  const [isExiting, setIsExiting] = useState(false);
+  const router = useRouter();
+  const editor = useEditor();
+  const activeProject = useEditor((e) => e.project.getActive());
 
-					<nav className="hidden items-center gap-4 md:flex">
-						{links.map((link) => (
-							<Link key={link.href} href={link.href}>
-								<Button variant="text" className="p-0 text-sm">
-									{link.label}
-								</Button>
-							</Link>
-						))}
-					</nav>
-				</div>
+  const handleExit = async () => {
+    if (isExiting) return;
+    setIsExiting(true);
+    try {
+      await editor.project.prepareExit();
+      editor.project.closeProject();
+    } catch (error) {
+      console.error("Failed to prepare project exit:", error);
+    } finally {
+      editor.project.closeProject();
+      router.push("/projects");
+    }
+  };
 
-				<div className="relative z-10">
-					<div className="flex items-center gap-3 md:hidden">
-						<Button
-							variant="text"
-							size="icon"
-							className="flex items-center justify-center p-0"
-							onClick={() => setIsMenuOpen(!isMenuOpen)}
-						>
-							<HugeiconsIcon icon={Menu02Icon} size={30} />
-						</Button>
-					</div>
-					<div className="hidden items-center gap-3 md:flex">
-						<Link href={SOCIAL_LINKS.github}>
-							<Button className="bg-background text-sm" variant="outline">
-								<HugeiconsIcon icon={GithubIcon} className="size-4" />
-								40k+
-							</Button>
-						</Link>
-						<Link href="/projects">
-							<Button className="text-sm">
-								Projects
-								<ArrowRight className="size-4" />
-							</Button>
-						</Link>
-						<ThemeToggle />
-					</div>
-				</div>
-				<div
-					className={cn(
-						"bg-background/20 pointer-events-none fixed inset-0 opacity-0 backdrop-blur-3xl",
-						"transition-opacity duration-150",
-						isMenuOpen && "pointer-events-auto opacity-100",
-					)}
-				>
-					<div className="relative h-full">
-						<button
-							type="button"
-							aria-label="Close menu"
-							className="absolute inset-0"
-							onClick={closeMenu}
-							onKeyDown={(event) => {
-								if (
-									event.key === "Enter" ||
-									event.key === " " ||
-									event.key === "Escape"
-								) {
-									event.preventDefault();
-									closeMenu();
-								}
-							}}
-						/>
-						<nav className="flex flex-col gap-3 px-6 pt-[5rem]">
-							{links.map((link, index) => (
-								<motion.div
-									key={link.href}
-									initial={{ scale: 0.98, opacity: 0 }}
-									animate={{
-										scale: isMenuOpen ? 1 : 0.98,
-										opacity: isMenuOpen ? 1 : 0,
-									}}
-									transition={{
-										duration: 0.4,
-										delay: isMenuOpen ? index * 0.1 : 0,
-										ease: [0.25, 0.46, 0.45, 0.94],
-									}}
-								>
-									<Link
-										href={link.href}
-										className="text-2xl font-semibold"
-										onClick={() => setIsMenuOpen(false)}
-									>
-										{link.label}
-									</Link>
-								</motion.div>
-							))}
-						</nav>
-						<ThemeToggle
-							className="absolute right-8 bottom-8 size-10"
-							iconClassName="!size-[1.2rem]"
-							onToggle={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-							}}
-						/>
-					</div>
-				</div>
-			</div>
-		</header>
-	);
+  const handleSaveProjectName = async (newName: string) => {
+    if (activeProject && newName.trim() && newName !== activeProject.metadata.name) {
+      try {
+        await editor.project.renameProject({
+          id: activeProject.metadata.id,
+          name: newName.trim(),
+        });
+      } catch (error) {
+        toast.error("Failed to rename project", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
+      } finally {
+        setOpenDialog(null);
+      }
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (activeProject) {
+      try {
+        await editor.project.deleteProjects({ ids: [activeProject.metadata.id] });
+        router.push("/projects");
+      } catch (error) {
+        toast.error("Failed to delete project", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
+      } finally {
+        setOpenDialog(null);
+      }
+    }
+  };
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {/* KokoCut آئیکن — نیلا K */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="p-1 rounded-sm size-8 shrink-0"
+            aria-label="Project menu"
+          >
+            <span
+              className="flex items-center justify-center size-6 rounded-md
+                         bg-[hsl(210,100%,60%)] text-white font-black text-sm leading-none"
+            >
+              K
+            </span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="z-[100] w-44">
+          <DropdownMenuItem
+            onClick={handleExit}
+            disabled={isExiting}
+            icon={<HugeiconsIcon icon={Logout05Icon} />}
+          >
+            Exit project
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setOpenDialog("shortcuts")}
+            icon={<HugeiconsIcon icon={CommandIcon} />}
+          >
+            Shortcuts
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild icon={<FaDiscord className="size-4!" />}>
+            <Link href={SOCIAL_LINKS.discord} target="_blank" rel="noopener noreferrer">
+              Discord
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <RenameProjectDialog
+        isOpen={openDialog === "rename"}
+        onOpenChange={(o) => setOpenDialog(o ? "rename" : null)}
+        onConfirm={handleSaveProjectName}
+        projectName={activeProject?.metadata.name || ""}
+      />
+      <DeleteProjectDialog
+        isOpen={openDialog === "delete"}
+        onOpenChange={(o) => setOpenDialog(o ? "delete" : null)}
+        onConfirm={handleDeleteProject}
+        projectNames={[activeProject?.metadata.name || ""]}
+      />
+      <ShortcutsDialog
+        isOpen={openDialog === "shortcuts"}
+        onOpenChange={(o) => setOpenDialog(o ? "shortcuts" : null)}
+      />
+    </>
+  );
+}
+
+function EditableProjectName() {
+  const editor = useEditor();
+  const activeProject = useEditor((e) => e.project.getActive());
+  const [isEditing, setIsEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const originalNameRef = useRef("");
+
+  const projectName = activeProject?.metadata.name || "";
+
+  const startEditing = () => {
+    if (isEditing) return;
+    originalNameRef.current = projectName;
+    setIsEditing(true);
+    requestAnimationFrame(() => inputRef.current?.select());
+  };
+
+  const saveEdit = async () => {
+    if (!inputRef.current || !activeProject) return;
+    const newName = inputRef.current.value.trim();
+    setIsEditing(false);
+    if (!newName) { inputRef.current.value = originalNameRef.current; return; }
+    if (newName !== originalNameRef.current) {
+      try {
+        await editor.project.renameProject({
+          id: activeProject.metadata.id,
+          name: newName,
+        });
+      } catch (error) {
+        toast.error("Failed to rename project", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
+      }
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter") { event.preventDefault(); inputRef.current?.blur(); }
+    else if (event.key === "Escape") {
+      event.preventDefault();
+      if (inputRef.current) { inputRef.current.value = originalNameRef.current; }
+      setIsEditing(false);
+      inputRef.current?.blur();
+    }
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      defaultValue={projectName}
+      readOnly={!isEditing}
+      onClick={startEditing}
+      onBlur={saveEdit}
+      onKeyDown={handleKeyDown}
+      style={{ fieldSizing: "content" }}
+      className={cn(
+        // موبائل پر مختصر، desktop پر پوری width
+        "text-[0.85rem] h-8 px-2 py-1 rounded-sm bg-transparent outline-none",
+        "cursor-pointer hover:bg-accent hover:text-accent-foreground",
+        "max-w-[120px] sm:max-w-[200px] truncate",
+        isEditing && "ring-1 ring-ring cursor-text hover:bg-transparent max-w-none truncate-none",
+      )}
+    />
+  );
 }
