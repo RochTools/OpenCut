@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "../ui/button";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -21,29 +21,97 @@ import { DEFAULT_LOGO_URL } from "@/site/brand";
 import { SOCIAL_LINKS } from "@/site/social";
 import { toast } from "sonner";
 import { useEditor } from "@/editor/use-editor";
-import { CommandIcon, Logout05Icon } from "@hugeicons/core-free-icons";
+import {
+	CommandIcon,
+	Logout05Icon,
+	MoreHorizontalIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ShortcutsDialog } from "@/actions/components/shortcuts-dialog";
 import Image from "next/image";
 import { cn } from "@/utils/ui";
 
+// ── موبائل Detect ────────────────────────────────────────────
+function useIsMobile() {
+	const [isMobile, setIsMobile] = useState(false);
+
+	useEffect(() => {
+		const check = () => setIsMobile(window.innerWidth < 768);
+		check();
+		window.addEventListener("resize", check);
+		return () => window.removeEventListener("resize", check);
+	}, []);
+
+	return isMobile;
+}
+
 export function EditorHeader() {
+	const isMobile = useIsMobile();
+
 	return (
-		<header className="bg-background flex h-[3.4rem] items-center justify-between px-3 pt-0.5">
-			<div className="flex items-center gap-1">
-				<ProjectDropdown />
+		<header
+			className={cn(
+				"bg-background flex items-center justify-between shrink-0 border-b border-border",
+				isMobile ? "h-12 px-2" : "h-[3.4rem] px-3 pt-0.5",
+			)}
+		>
+			<div className="flex items-center gap-1 min-w-0">
+				{isMobile ? <MobileProjectDropdown /> : <ProjectDropdown />}
 				<EditableProjectName />
 			</div>
-			<nav className="flex items-center gap-2">
-				<FeedbackPopover />
-				<ExportButton />
-				<ThemeToggle />
+			<nav className="flex items-center gap-1 sm:gap-2 shrink-0">
+				{isMobile ? <MobileActions /> : <DesktopActions />}
 			</nav>
 		</header>
 	);
 }
 
-function ProjectDropdown() {
+// ── Desktop Actions ──────────────────────────────────────────
+function DesktopActions() {
+	return (
+		<>
+			<FeedbackPopover />
+			<ExportButton />
+			<ThemeToggle />
+		</>
+	);
+}
+
+// ── Mobile Actions (More Menu) ───────────────────────────────
+function MobileActions() {
+	const [openDialog, setOpenDialog] = useState<"shortcuts" | null>(null);
+
+	return (
+		<>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button variant="ghost" size="icon" className="size-9">
+						<HugeiconsIcon icon={MoreHorizontalIcon} className="size-5" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="z-100 w-44">
+					<FeedbackPopover asMenuItem />
+					<ExportButton asMenuItem />
+					<ThemeToggle asMenuItem />
+					<DropdownMenuSeparator />
+					<DropdownMenuItem
+						onClick={() => setOpenDialog("shortcuts")}
+						icon={<HugeiconsIcon icon={CommandIcon} />}
+					>
+						Shortcuts
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+			<ShortcutsDialog
+				isOpen={openDialog === "shortcuts"}
+				onOpenChange={(isOpen) => setOpenDialog(isOpen ? "shortcuts" : null)}
+			/>
+		</>
+	);
+}
+
+// ── Mobile Project Dropdown ──────────────────────────────────
+function MobileProjectDropdown() {
 	const [openDialog, setOpenDialog] = useState<
 		"delete" | "rename" | "shortcuts" | null
 	>(null);
@@ -55,7 +123,6 @@ function ProjectDropdown() {
 	const handleExit = async () => {
 		if (isExiting) return;
 		setIsExiting(true);
-
 		try {
 			await editor.project.prepareExit();
 			editor.project.closeProject();
@@ -68,11 +135,7 @@ function ProjectDropdown() {
 	};
 
 	const handleSaveProjectName = async (newName: string) => {
-		if (
-			activeProject &&
-			newName.trim() &&
-			newName !== activeProject.metadata.name
-		) {
+		if (activeProject && newName.trim() && newName !== activeProject.metadata.name) {
 			try {
 				await editor.project.renameProject({
 					id: activeProject.metadata.id,
@@ -80,8 +143,7 @@ function ProjectDropdown() {
 				});
 			} catch (error) {
 				toast.error("Failed to rename project", {
-					description:
-						error instanceof Error ? error.message : "Please try again",
+					description: error instanceof Error ? error.message : "Please try again",
 				});
 			} finally {
 				setOpenDialog(null);
@@ -92,14 +154,11 @@ function ProjectDropdown() {
 	const handleDeleteProject = async () => {
 		if (activeProject) {
 			try {
-				await editor.project.deleteProjects({
-					ids: [activeProject.metadata.id],
-				});
+				await editor.project.deleteProjects({ ids: [activeProject.metadata.id] });
 				router.push("/projects");
 			} catch (error) {
 				toast.error("Failed to delete project", {
-					description:
-						error instanceof Error ? error.message : "Please try again",
+					description: error instanceof Error ? error.message : "Please try again",
 				});
 			} finally {
 				setOpenDialog(null);
@@ -111,10 +170,10 @@ function ProjectDropdown() {
 		<>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button variant="ghost" size="icon" className="p-1 rounded-sm size-8">
+					<Button variant="ghost" size="icon" className="p-1 rounded-sm size-8 shrink-0">
 						<Image
 							src={DEFAULT_LOGO_URL}
-							alt="Project thumbnail"
+							alt="Project"
 							width={32}
 							height={32}
 							className="invert dark:invert-0 size-5"
@@ -122,29 +181,18 @@ function ProjectDropdown() {
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="z-100 w-44">
-					<DropdownMenuItem
-						onClick={handleExit}
-						disabled={isExiting}
-						icon={<HugeiconsIcon icon={Logout05Icon} />}
-					>
+					<DropdownMenuItem onClick={handleExit} disabled={isExiting} icon={<HugeiconsIcon icon={Logout05Icon} />}>
 						Exit project
 					</DropdownMenuItem>
-
-					<DropdownMenuItem
-						onClick={() => setOpenDialog("shortcuts")}
-						icon={<HugeiconsIcon icon={CommandIcon} />}
-					>
-						Shortcuts
+					<DropdownMenuItem onClick={() => setOpenDialog("rename")}>
+						Rename
 					</DropdownMenuItem>
-
+					<DropdownMenuItem onClick={() => setOpenDialog("delete")} className="text-destructive">
+						Delete
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
-
 					<DropdownMenuItem asChild icon={<FaDiscord className="size-4!" />}>
-						<Link
-							href={SOCIAL_LINKS.discord}
-							target="_blank"
-							rel="noopener noreferrer"
-						>
+						<Link href={SOCIAL_LINKS.discord} target="_blank" rel="noopener noreferrer">
 							Discord
 						</Link>
 					</DropdownMenuItem>
@@ -162,10 +210,83 @@ function ProjectDropdown() {
 				onConfirm={handleDeleteProject}
 				projectNames={[activeProject?.metadata.name || ""]}
 			/>
-			<ShortcutsDialog
-				isOpen={openDialog === "shortcuts"}
-				onOpenChange={(isOpen) => setOpenDialog(isOpen ? "shortcuts" : null)}
-			/>
+		</>
+	);
+}
+
+// ── Desktop Project Dropdown (پرانا) ─────────────────────────
+function ProjectDropdown() {
+	const [openDialog, setOpenDialog] = useState<"delete" | "rename" | "shortcuts" | null>(null);
+	const [isExiting, setIsExiting] = useState(false);
+	const router = useRouter();
+	const editor = useEditor();
+	const activeProject = useEditor((e) => e.project.getActive());
+
+	const handleExit = async () => {
+		if (isExiting) return;
+		setIsExiting(true);
+		try {
+			await editor.project.prepareExit();
+			editor.project.closeProject();
+		} catch (error) {
+			console.error("Failed to prepare project exit:", error);
+		} finally {
+			editor.project.closeProject();
+			router.push("/projects");
+		}
+	};
+
+	const handleSaveProjectName = async (newName: string) => {
+		if (activeProject && newName.trim() && newName !== activeProject.metadata.name) {
+			try {
+				await editor.project.renameProject({ id: activeProject.metadata.id, name: newName.trim() });
+			} catch (error) {
+				toast.error("Failed to rename project", { description: error instanceof Error ? error.message : "Please try again" });
+			} finally {
+				setOpenDialog(null);
+			}
+		}
+	};
+
+	const handleDeleteProject = async () => {
+		if (activeProject) {
+			try {
+				await editor.project.deleteProjects({ ids: [activeProject.metadata.id] });
+				router.push("/projects");
+			} catch (error) {
+				toast.error("Failed to delete project", { description: error instanceof Error ? error.message : "Please try again" });
+			} finally {
+				setOpenDialog(null);
+			}
+		}
+	};
+
+	return (
+		<>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button variant="ghost" size="icon" className="p-1 rounded-sm size-8">
+						<Image src={DEFAULT_LOGO_URL} alt="Project thumbnail" width={32} height={32} className="invert dark:invert-0 size-5" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="start" className="z-100 w-44">
+					<DropdownMenuItem onClick={handleExit} disabled={isExiting} icon={<HugeiconsIcon icon={Logout05Icon} />}>
+						Exit project
+					</DropdownMenuItem>
+					<DropdownMenuItem onClick={() => setOpenDialog("shortcuts")} icon={<HugeiconsIcon icon={CommandIcon} />}>
+						Shortcuts
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem asChild icon={<FaDiscord className="size-4!" />}>
+						<Link href={SOCIAL_LINKS.discord} target="_blank" rel="noopener noreferrer">
+							Discord
+						</Link>
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+			<RenameProjectDialog isOpen={openDialog === "rename"} onOpenChange={(isOpen) => setOpenDialog(isOpen ? "rename" : null)} onConfirm={(newName) => handleSaveProjectName(newName)} projectName={activeProject?.metadata.name || ""} />
+			<DeleteProjectDialog isOpen={openDialog === "delete"} onOpenChange={(isOpen) => setOpenDialog(isOpen ? "delete" : null)} onConfirm={handleDeleteProject} projectNames={[activeProject?.metadata.name || ""]} />
+			<ShortcutsDialog isOpen={openDialog === "shortcuts"} onOpenChange={(isOpen) => setOpenDialog(isOpen ? "shortcuts" : null)} />
 		</>
 	);
 }
@@ -176,6 +297,7 @@ function EditableProjectName() {
 	const [isEditing, setIsEditing] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const originalNameRef = useRef("");
+	const isMobile = useIsMobile();
 
 	const projectName = activeProject?.metadata.name || "";
 
@@ -183,7 +305,6 @@ function EditableProjectName() {
 		if (isEditing) return;
 		originalNameRef.current = projectName;
 		setIsEditing(true);
-
 		requestAnimationFrame(() => {
 			inputRef.current?.select();
 		});
@@ -193,23 +314,15 @@ function EditableProjectName() {
 		if (!inputRef.current || !activeProject) return;
 		const newName = inputRef.current.value.trim();
 		setIsEditing(false);
-
 		if (!newName) {
 			inputRef.current.value = originalNameRef.current;
 			return;
 		}
-
 		if (newName !== originalNameRef.current) {
 			try {
-				await editor.project.renameProject({
-					id: activeProject.metadata.id,
-					name: newName,
-				});
+				await editor.project.renameProject({ id: activeProject.metadata.id, name: newName });
 			} catch (error) {
-				toast.error("Failed to rename project", {
-					description:
-						error instanceof Error ? error.message : "Please try again",
-				});
+				toast.error("Failed to rename project", { description: error instanceof Error ? error.message : "Please try again" });
 			}
 		}
 	};
@@ -240,7 +353,8 @@ function EditableProjectName() {
 			onKeyDown={handleKeyDown}
 			style={{ fieldSizing: "content" }}
 			className={cn(
-				"text-[0.9rem] h-8 px-2 py-1 rounded-sm bg-transparent outline-none cursor-pointer hover:bg-accent hover:text-accent-foreground",
+				"h-8 px-2 py-1 rounded-sm bg-transparent outline-none cursor-pointer hover:bg-accent hover:text-accent-foreground",
+				isMobile ? "text-sm max-w-[120px] truncate" : "text-[0.9rem]",
 				isEditing && "ring-1 ring-ring cursor-text hover:bg-transparent",
 			)}
 		/>
