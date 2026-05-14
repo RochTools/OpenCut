@@ -14,11 +14,14 @@ export function Hero() {
 				src="/landing-page-dark.png"
 				height={1903.5}
 				width={1269}
-				alt="OpenCut video editor landing page background"
+				alt="KokoCut video editor landing page background"
 			/>
 			<div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center">
 				<div className="inline-block text-4xl font-bold tracking-tighter md:text-[4rem]">
-					<h1>The open source</h1>
+					<h1>
+						<span className="text-[hsl(200,90%,52%)]">Koko</span>
+						<span>Cut</span>
+					</h1>
 					<Handlebars>Video editor</Handlebars>
 				</div>
 
