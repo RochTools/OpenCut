@@ -1,7 +1,12 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { type Tab, useAssetsPanelStore } from "@/components/editor/panels/assets/assets-panel-store";
+import {
+	TAB_KEYS,
+	tabs,
+	type Tab,
+	useAssetsPanelStore,
+} from "@/components/editor/panels/assets/assets-panel-store";
 import { TabBar } from "./tabbar";
 import { Captions } from "@/subtitles/components/assets-view";
 import { MediaView } from "./views/assets";
@@ -10,19 +15,8 @@ import { SoundsView } from "@/sounds/components/assets-view";
 import { StickersView } from "@/stickers/components/assets-view";
 import { TextView } from "@/text/components/assets-view";
 import { EffectsView } from "@/effects/components/assets-view";
-import { useEffect, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/utils/ui";
-
-function useIsMobile() {
-	const [isMobile, setIsMobile] = useState(false);
-	useEffect(() => {
-		const check = () => setIsMobile(window.innerWidth < 768);
-		check();
-		window.addEventListener("resize", check);
-		return () => window.removeEventListener("resize", check);
-	}, []);
-	return isMobile;
-}
 
 export function AssetsPanel() {
 	const { activeTab } = useAssetsPanelStore();
@@ -48,7 +42,7 @@ export function AssetsPanel() {
 		settings: <SettingsView />,
 	};
 
-	// ── Desktop: side tab bar ─────────────────────────────
+	// ── Desktop: عمودی sidebar (بالکل پہلے جیسا) ────────────
 	if (!isMobile) {
 		return (
 			<div className="panel bg-background flex h-full rounded-sm border overflow-hidden">
@@ -59,15 +53,10 @@ export function AssetsPanel() {
 		);
 	}
 
-	// ── موبائل: اوپر horizontal scrollable tabs ───────────
+	// ── Mobile: horizontal tab bar اوپر، content نیچے ────────
 	return (
 		<div className="flex flex-col size-full bg-background overflow-hidden">
-			{/* Horizontal scrollable tab pills */}
-			<div className="flex-shrink-0 border-b border-border overflow-x-auto no-scrollbar">
-				<div className="flex items-center gap-0.5 px-2 py-1.5">
-					<MobileTabBar />
-				</div>
-			</div>
+			<MobileTabBar />
 			<div className="flex-1 overflow-hidden overflow-y-auto">
 				{viewMap[activeTab]}
 			</div>
@@ -75,38 +64,39 @@ export function AssetsPanel() {
 	);
 }
 
+// ── موبائل horizontal tab bar ─────────────────────────────────
+// وہی HugeIcons جو desktop sidebar میں ہیں — بس horizontal
 function MobileTabBar() {
 	const { activeTab, setActiveTab } = useAssetsPanelStore();
 
-	const mobileTabs: { id: Tab; label: string; emoji: string }[] = [
-		{ id: "media",       label: "Media",    emoji: "🖼️" },
-		{ id: "sounds",      label: "Sounds",   emoji: "🔊" },
-		{ id: "text",        label: "Text",     emoji: "📝" },
-		{ id: "stickers",    label: "Stickers", emoji: "🎯" },
-		{ id: "effects",     label: "Effects",  emoji: "✨" },
-		{ id: "transitions", label: "Trans.",   emoji: "🔄" },
-		{ id: "captions",    label: "Captions", emoji: "💬" },
-		{ id: "adjustment",  label: "Adjust",   emoji: "🎨" },
-		{ id: "settings",    label: "Settings", emoji: "⚙️" },
-	];
-
 	return (
-		<>
-			{mobileTabs.map((tab) => (
-				<button
-					key={tab.id}
-					onClick={() => setActiveTab(tab.id)}
-					className={cn(
-						"flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0",
-						activeTab === tab.id
-							? "bg-primary text-primary-foreground"
-							: "bg-transparent text-muted-foreground hover:bg-accent",
-					)}
-				>
-					<span className="text-sm">{tab.emoji}</span>
-					<span>{tab.label}</span>
-				</button>
-			))}
-		</>
+		<div className="shrink-0 border-b border-border overflow-x-auto scrollbar-hidden">
+			<div className="flex items-center gap-1 px-2 py-1.5 w-max">
+				{TAB_KEYS.map((tabKey) => {
+					const tab = tabs[tabKey];
+					const isActive = activeTab === tabKey;
+
+					return (
+						<button
+							key={tabKey}
+							onClick={() => setActiveTab(tabKey)}
+							aria-label={tab.label}
+							className={cn(
+								"flex flex-col items-center justify-center gap-1",
+								"w-14 py-2 rounded-lg shrink-0 transition-colors",
+								isActive
+									? "bg-secondary text-secondary-foreground"
+									: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+							)}
+						>
+							<tab.icon className="size-5" />
+							<span className="text-[0.6rem] leading-none font-medium">
+								{tab.label}
+							</span>
+						</button>
+					);
+				})}
+			</div>
+		</div>
 	);
 }
