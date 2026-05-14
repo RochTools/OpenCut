@@ -49,6 +49,7 @@ import { OcRippleIcon } from "@/components/icons";
 import { GraphEditorPopover } from "./graph-editor/popover";
 import { PopoverTrigger } from "@/components/ui/popover";
 import { useGraphEditorController } from "./graph-editor/use-controller";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function TimelineToolbar({
 	zoomLevel,
@@ -59,6 +60,8 @@ export function TimelineToolbar({
 	minZoom: number;
 	setZoomLevel: ({ zoom }: { zoom: number }) => void;
 }) {
+	const isMobile = useIsMobile();
+
 	const handleZoom = ({ direction }: { direction: "in" | "out" }) => {
 		const newZoomLevel =
 			direction === "in"
@@ -69,11 +72,15 @@ export function TimelineToolbar({
 
 	return (
 		<ScrollArea className="scrollbar-hidden">
-			<div className="flex h-10 items-center justify-between border-b px-2 py-1">
+			<div
+				className={cn(
+					"flex items-center justify-between border-b px-2",
+					// موبائل پر اونچا اور آسان touch
+					isMobile ? "h-12 py-1.5" : "h-10 py-1",
+				)}
+			>
 				<ToolbarLeftSection />
-
 				<SceneSelector />
-
 				<ToolbarRightSection
 					zoomLevel={zoomLevel}
 					minZoom={minZoom}
@@ -87,46 +94,36 @@ export function TimelineToolbar({
 
 function ToolbarLeftSection() {
 	const editor = useEditor();
-	const mediaAssets = useEditor((currentEditor) =>
-		currentEditor.media.getAssets(),
-	);
+	const mediaAssets = useEditor((e) => e.media.getAssets());
 	const { selectedElements } = useElementSelection();
 	const graphEditor = useGraphEditorController();
 	const isCurrentlyBookmarked = useEditor((e) =>
 		e.scenes.isBookmarked({ time: e.playback.getCurrentTime() }),
 	);
+
 	const selectedElement =
 		selectedElements.length === 1
-			? (editor.timeline.getElementsWithTracks({
-					elements: selectedElements,
-				})[0] ?? null)
+			? (editor.timeline.getElementsWithTracks({ elements: selectedElements })[0] ?? null)
 			: null;
+
 	const selectedMediaAsset = (() => {
-		if (!selectedElement) {
-			return null;
-		}
-
+		if (!selectedElement) return null;
 		const { element } = selectedElement;
-		if (!hasMediaId(element)) {
-			return null;
-		}
-
+		if (!hasMediaId(element)) return null;
 		return mediaAssets.find((asset) => asset.id === element.mediaId) ?? null;
 	})();
+
 	const canToggleSelectedSourceAudio =
-		!!selectedElement &&
-		canToggleSourceAudio(selectedElement.element, selectedMediaAsset);
+		!!selectedElement && canToggleSourceAudio(selectedElement.element, selectedMediaAsset);
+
 	const sourceAudioLabel =
 		selectedElement?.element.type === "video"
-			? getSourceAudioActionLabel({
-					element: selectedElement.element,
-				})
+			? getSourceAudioActionLabel({ element: selectedElement.element })
 			: "Extract audio";
+
 	const isSelectedSourceAudioSeparated =
 		selectedElement?.element.type === "video" &&
-		isSourceAudioSeparated({
-			element: selectedElement.element,
-		});
+		isSourceAudioSeparated({ element: selectedElement.element });
 
 	const handleAction = ({
 		action,
@@ -140,28 +137,23 @@ function ToolbarLeftSection() {
 	};
 
 	return (
-		<div className="flex items-center gap-1">
+		<div className="flex items-center gap-0.5 sm:gap-1">
 			<TooltipProvider delayDuration={500}>
 				<ToolbarButton
 					icon={<HugeiconsIcon icon={ScissorIcon} />}
 					tooltip="Split element"
 					onClick={({ event }) => handleAction({ action: "split", event })}
 				/>
-
 				<ToolbarButton
 					icon={<HugeiconsIcon icon={AlignLeftIcon} />}
 					tooltip="Split left"
 					onClick={({ event }) => handleAction({ action: "split-left", event })}
 				/>
-
 				<ToolbarButton
 					icon={<HugeiconsIcon icon={AlignRightIcon} />}
 					tooltip="Split right"
-					onClick={({ event }) =>
-						handleAction({ action: "split-right", event })
-					}
+					onClick={({ event }) => handleAction({ action: "split-right", event })}
 				/>
-
 				<ToolbarButton
 					icon={
 						<HugeiconsIcon
@@ -174,7 +166,6 @@ function ToolbarLeftSection() {
 						handleAction({ action: "toggle-source-audio", event })
 					}
 				/>
-
 				<ToolbarButton
 					icon={<HugeiconsIcon icon={Copy01Icon} />}
 					tooltip="Duplicate element"
@@ -182,14 +173,12 @@ function ToolbarLeftSection() {
 						handleAction({ action: "duplicate-selected", event })
 					}
 				/>
-
 				<ToolbarButton
 					icon={<HugeiconsIcon icon={SnowIcon} />}
 					tooltip="Freeze frame (coming soon)"
 					disabled={true}
 					onClick={({ event: _event }) => {}}
 				/>
-
 				<ToolbarButton
 					icon={<HugeiconsIcon icon={Delete02Icon} />}
 					tooltip="Delete element"
@@ -281,7 +270,7 @@ function ToolbarRightSection({
 	const toggleRippleEditing = useTimelineStore((s) => s.toggleRippleEditing);
 
 	return (
-		<div className="flex items-center gap-1">
+		<div className="flex items-center gap-0.5 sm:gap-1">
 			<TooltipProvider delayDuration={500}>
 				<ToolbarButton
 					icon={<HugeiconsIcon icon={MagnetIcon} />}
@@ -289,7 +278,6 @@ function ToolbarRightSection({
 					tooltip="Auto snapping"
 					onClick={() => toggleSnapping()}
 				/>
-
 				<ToolbarButton
 					icon={<OcRippleIcon size={24} className="scale-110" />}
 					isActive={rippleEditingEnabled}
@@ -300,7 +288,7 @@ function ToolbarRightSection({
 
 			<div className="bg-border mx-1 h-6 w-px" />
 
-			<div className="flex items-center gap-1">
+			<div className="flex items-center gap-0.5 sm:gap-1">
 				<Button
 					variant="text"
 					size="icon"
@@ -308,8 +296,9 @@ function ToolbarRightSection({
 				>
 					<HugeiconsIcon icon={SearchMinusIcon} />
 				</Button>
+				{/* موبائل پر slider چھوٹا */}
 				<Slider
-					className="w-28"
+					className="w-16 sm:w-28"
 					value={[zoomToSlider({ zoomLevel, minZoom })]}
 					onValueChange={(values) =>
 						onZoomChange(sliderToZoom({ sliderPosition: values[0], minZoom }))
@@ -345,6 +334,8 @@ function ToolbarButton({
 	isActive?: boolean;
 	buttonWrapper?: (button: React.ReactElement) => React.ReactElement;
 }) {
+	const isMobile = useIsMobile();
+
 	const button = (
 		<Button
 			variant={isActive ? "secondary" : "text"}
@@ -353,12 +344,15 @@ function ToolbarButton({
 			onClick={onClick ? (event) => onClick({ event }) : undefined}
 			className={cn(
 				"rounded-sm",
+				// موبائل پر بڑا touch target
+				isMobile ? "size-10 [&_svg]:size-5" : "size-8 [&_svg]:size-4",
 				disabled ? "cursor-not-allowed opacity-50" : "",
 			)}
 		>
 			{icon}
 		</Button>
 	);
+
 	const trigger = disabled ? (
 		<span className="inline-flex">{button}</span>
 	) : buttonWrapper ? (
