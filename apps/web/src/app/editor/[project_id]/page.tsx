@@ -37,25 +37,34 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useElementSelection } from "@/timeline/hooks/element/use-element-selection";
 import { cn } from "@/utils/ui";
 import {
-	Folder03Icon,
-	TimeQuarterPassIcon,
-	PlayIcon,
-} from "@hugeicons/core-free-icons";
+	TAB_KEYS,
+	tabs,
+	type Tab,
+	useAssetsPanelStore,
+} from "@/components/editor/panels/assets/assets-panel-store";
+import { Captions } from "@/subtitles/components/assets-view";
+import { MediaView } from "@/components/editor/panels/assets/views/assets";
+import { SettingsView } from "@/components/editor/panels/assets/views/settings";
+import { SoundsView } from "@/sounds/components/assets-view";
+import { StickersView } from "@/stickers/components/assets-view";
+import { TextView } from "@/text/components/assets-view";
+import { EffectsView } from "@/effects/components/assets-view";
 
-// ── Mobile bottom tab types ───────────────────────────────────
-type MobileTab = "assets" | "preview" | "timeline";
+// ── View map ──────────────────────────────────────────────────
+function useViewMap(): Record<Tab, React.ReactNode> {
+	return {
+		media:       <MediaView />,
+		sounds:      <SoundsView />,
+		text:        <TextView />,
+		stickers:    <StickersView />,
+		effects:     <EffectsView />,
+		transitions: <div className="text-muted-foreground p-4 text-sm">Transitions coming soon...</div>,
+		captions:    <Captions />,
+		adjustment:  <div className="text-muted-foreground p-4 text-sm">Adjustment coming soon...</div>,
+		settings:    <SettingsView />,
+	};
+}
 
-const MOBILE_TABS: {
-	id: MobileTab;
-	label: string;
-	icon: typeof Folder03Icon;
-}[] = [
-	{ id: "assets",   label: "Assets",   icon: Folder03Icon },
-	{ id: "preview",  label: "Preview",  icon: PlayIcon },
-	{ id: "timeline", label: "Timeline", icon: TimeQuarterPassIcon },
-];
-
-// ── Main Entry ────────────────────────────────────────────────
 export default function Editor() {
 	const params = useParams();
 	const projectId = params.project_id as string;
@@ -97,31 +106,33 @@ function DegradedRendererBanner() {
 	);
 }
 
-// ── Layout Switch ─────────────────────────────────────────────
 function EditorLayout() {
 	const isMobile = useIsMobile();
 	return isMobile ? <MobileEditorLayout /> : <DesktopEditorLayout />;
 }
 
 // ══════════════════════════════════════════════════════════════
-// MOBILE LAYOUT
+// MOBILE LAYOUT — بالکل InShot جیسا، سب ایک screen پر
+//
 // ┌─────────────────────────────┐
-// │        Preview              │ ← flex-1, پوری height
+// │        Preview              │ ← 38vh
 // ├─────────────────────────────┤
 // │   Properties (slide up)     │ ← element select پر
 // ├─────────────────────────────┤
-// │   Timeline strip            │ ← preview tab پر
+// │        Timeline             │ ← 140px، ہمیشہ
 // ├─────────────────────────────┤
-// │  Assets │ Preview │ Timeline│ ← HugeIcons bottom bar
+// │ [🎬][🔊][T][★][✨][⚙]     │ ← HugeIcons horizontal scroll
+// ├─────────────────────────────┤
+// │      Panel content          │ ← flex-1، scroll کریں
 // └─────────────────────────────┘
 // ══════════════════════════════════════════════════════════════
 function MobileEditorLayout() {
 	usePasteMedia();
-	const [activeTab, setActiveTab] = useState<MobileTab>("preview");
 	const { selectedElements } = useElementSelection();
 	const hasSelection = selectedElements.length === 1;
+	const { activeTab, setActiveTab } = useAssetsPanelStore();
+	const viewMap = useViewMap();
 
-	// overlays
 	const activeScene = useEditor((e) => e.scenes.getActiveSceneOrNull());
 	const currentTime = useEditor((e) => e.playback.getCurrentTime());
 	const activeGuide = usePreviewStore((s) => s.activeGuide);
@@ -160,92 +171,67 @@ function MobileEditorLayout() {
 	return (
 		<div className="flex flex-col w-full h-full bg-background overflow-hidden">
 
-			{/* ── Content area ──────────────────────────────── */}
-			<div className="flex-1 min-h-0 relative overflow-hidden">
-
-				{/* Preview — ہمیشہ mount رہے تاکہ video pause نہ ہو */}
-				<div
-					className={cn(
-						"absolute inset-0",
-						activeTab === "preview"
-							? "z-10 opacity-100"
-							: "z-0 opacity-0 pointer-events-none",
-					)}
-				>
-					<PreviewPanel
-						overlayControls={overlayControls}
-						overlayInstances={overlaySource.instances}
-						onOverlayVisibilityChange={setOverlayVisibility}
-					/>
-				</div>
-
-				{/* Assets tab */}
-				{activeTab === "assets" && (
-					<div className="absolute inset-0 z-10 overflow-auto bg-background">
-						<AssetsPanel />
-					</div>
-				)}
-
-				{/* Timeline tab (full screen) */}
-				{activeTab === "timeline" && (
-					<div className="absolute inset-0 z-10 overflow-auto bg-background p-2">
-						<Timeline />
-					</div>
-				)}
+			{/* ① Preview — اوپر ──────────────────────────────── */}
+			<div className="shrink-0" style={{ height: "38vh" }}>
+				<PreviewPanel
+					overlayControls={overlayControls}
+					overlayInstances={overlaySource.instances}
+					onOverlayVisibilityChange={setOverlayVisibility}
+				/>
 			</div>
 
-			{/* ── Properties panel — element select ہونے پر آئے ── */}
-			{activeTab === "preview" && (
-				<div
-					className={cn(
-						"shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-t border-border",
-						hasSelection ? "h-[40vh]" : "h-0",
-					)}
-				>
-					<PropertiesPanel />
-				</div>
-			)}
+			{/* ② Properties — element select ہونے پر آئے ──────── */}
+			<div
+				className={cn(
+					"shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-t border-border",
+					hasSelection ? "h-[32vh]" : "h-0",
+				)}
+			>
+				<PropertiesPanel />
+			</div>
 
-			{/* ── Timeline strip — preview tab پر نیچے ─────────── */}
-			{activeTab === "preview" && (
-				<div className="shrink-0 h-[100px] border-t border-border overflow-hidden">
-					<Timeline />
-				</div>
-			)}
+			{/* ③ Timeline — ہمیشہ درمیان میں ──────────────────── */}
+			<div
+				className="shrink-0 border-t border-border bg-background overflow-hidden"
+				style={{ height: "140px" }}
+			>
+				<Timeline />
+			</div>
 
-			{/* ── Bottom Tab Bar — HugeIcons ───────────────────── */}
-			<nav className="shrink-0 flex items-stretch h-14 border-t border-border bg-background safe-area-bottom">
-				{MOBILE_TABS.map((tab) => {
-					const isActive = activeTab === tab.id;
-					return (
-						<button
-							key={tab.id}
-							onClick={() => setActiveTab(tab.id)}
-							className={cn(
-								"flex flex-col items-center justify-center gap-1 flex-1",
-								"transition-colors active:bg-accent/40",
-								isActive
-									? "text-primary"
-									: "text-muted-foreground",
-							)}
-						>
-							<HugeiconsIcon
-								icon={tab.icon}
+			{/* ④ Tools horizontal tab bar — HugeIcons ────────── */}
+			<div className="shrink-0 border-t border-border bg-background overflow-x-auto scrollbar-hidden">
+				<div className="flex items-center gap-1 px-2 py-1.5 w-max">
+					{TAB_KEYS.map((tabKey) => {
+						const tab = tabs[tabKey];
+						const isActive = activeTab === tabKey;
+						return (
+							<button
+								key={tabKey}
+								onClick={() => setActiveTab(tabKey)}
+								aria-label={tab.label}
 								className={cn(
-									"size-5 shrink-0",
-									isActive ? "text-primary" : "text-muted-foreground",
+									"flex flex-col items-center justify-center gap-1",
+									"w-14 py-2 rounded-lg shrink-0 transition-colors",
+									isActive
+										? "bg-secondary text-secondary-foreground"
+										: "text-muted-foreground hover:bg-accent",
 								)}
-							/>
-							<span className="text-[10px] font-medium leading-none">
-								{tab.label}
-							</span>
-							{isActive && (
-								<span className="w-4 h-0.5 rounded-full bg-primary" />
-							)}
-						</button>
-					);
-				})}
-			</nav>
+							>
+								<tab.icon className="size-5" />
+								<span className="text-[0.6rem] leading-none font-medium">
+									{tab.label}
+								</span>
+							</button>
+						);
+					})}
+				</div>
+			</div>
+
+			{/* ⑤ Panel content — نیچے، flex-1 ─────────────────── */}
+			<div className="flex-1 min-h-0 overflow-y-auto bg-background">
+				{viewMap[activeTab]}
+			</div>
+
 		</div>
 	);
 }
@@ -301,12 +287,7 @@ function DesktopEditorLayout() {
 				setPanel({ panel: "timeline",    size: sizes[1] ?? panels.timeline });
 			}}
 		>
-			<ResizablePanel
-				defaultSize={panels.mainContent}
-				minSize={30}
-				maxSize={85}
-				className="min-h-0"
-			>
+			<ResizablePanel defaultSize={panels.mainContent} minSize={30} maxSize={85} className="min-h-0">
 				<ResizablePanelGroup
 					direction="horizontal"
 					className="size-full gap-[0.19rem] px-3"
@@ -334,12 +315,7 @@ function DesktopEditorLayout() {
 				</ResizablePanelGroup>
 			</ResizablePanel>
 			<ResizableHandle withHandle />
-			<ResizablePanel
-				defaultSize={panels.timeline}
-				minSize={15}
-				maxSize={70}
-				className="min-h-0 px-3 pb-3"
-			>
+			<ResizablePanel defaultSize={panels.timeline} minSize={15} maxSize={70} className="min-h-0 px-3 pb-3">
 				<Timeline />
 			</ResizablePanel>
 		</ResizablePanelGroup>
