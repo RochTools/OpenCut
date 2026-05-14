@@ -36,9 +36,24 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useElementSelection } from "@/timeline/hooks/element/use-element-selection";
 import { cn } from "@/utils/ui";
+import {
+	Folder03Icon,
+	TimeQuarterPassIcon,
+	PlayIcon,
+} from "@hugeicons/core-free-icons";
 
-// ── Tab Types ─────────────────────────────────────────────────
+// ── Mobile bottom tab types ───────────────────────────────────
 type MobileTab = "assets" | "preview" | "timeline";
+
+const MOBILE_TABS: {
+	id: MobileTab;
+	label: string;
+	icon: typeof Folder03Icon;
+}[] = [
+	{ id: "assets",   label: "Assets",   icon: Folder03Icon },
+	{ id: "preview",  label: "Preview",  icon: PlayIcon },
+	{ id: "timeline", label: "Timeline", icon: TimeQuarterPassIcon },
+];
 
 // ── Main Entry ────────────────────────────────────────────────
 export default function Editor() {
@@ -89,16 +104,16 @@ function EditorLayout() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// MOBILE LAYOUT — CapCut / InShot style
-// ┌─────────────────────────┐
-// │      Preview (flex-1)   │
-// ├─────────────────────────┤
-// │   Properties (slide up) │  ← element select ہونے پر
-// ├─────────────────────────┤
-// │   Timeline strip        │
-// ├─────────────────────────┤
-// │  Assets | Preview | ...  │  ← bottom tab bar
-// └─────────────────────────┘
+// MOBILE LAYOUT
+// ┌─────────────────────────────┐
+// │        Preview              │ ← flex-1, پوری height
+// ├─────────────────────────────┤
+// │   Properties (slide up)     │ ← element select پر
+// ├─────────────────────────────┤
+// │   Timeline strip            │ ← preview tab پر
+// ├─────────────────────────────┤
+// │  Assets │ Preview │ Timeline│ ← HugeIcons bottom bar
+// └─────────────────────────────┘
 // ══════════════════════════════════════════════════════════════
 function MobileEditorLayout() {
 	usePasteMedia();
@@ -106,7 +121,7 @@ function MobileEditorLayout() {
 	const { selectedElements } = useElementSelection();
 	const hasSelection = selectedElements.length === 1;
 
-	// Overlay setup
+	// overlays
 	const activeScene = useEditor((e) => e.scenes.getActiveSceneOrNull());
 	const currentTime = useEditor((e) => e.playback.getCurrentTime());
 	const activeGuide = usePreviewStore((s) => s.activeGuide);
@@ -142,22 +157,19 @@ function MobileEditorLayout() {
 		[overlaySource.definitions, overlays],
 	);
 
-	const TABS: { id: MobileTab; label: string; emoji: string }[] = [
-		{ id: "assets",   label: "Assets",   emoji: "🎬" },
-		{ id: "preview",  label: "Preview",  emoji: "▶️" },
-		{ id: "timeline", label: "Timeline", emoji: "📊" },
-	];
-
 	return (
-		<div className="flex flex-col size-full bg-background overflow-hidden">
+		<div className="flex flex-col w-full h-full bg-background overflow-hidden">
 
-			{/* ── Main content area ─────────────────────────── */}
-			<div className="flex-1 min-h-0 overflow-hidden relative">
-				{/* Preview — ہمیشہ render ہو لیکن صرف preview tab پر visible */}
+			{/* ── Content area ──────────────────────────────── */}
+			<div className="flex-1 min-h-0 relative overflow-hidden">
+
+				{/* Preview — ہمیشہ mount رہے تاکہ video pause نہ ہو */}
 				<div
 					className={cn(
-						"absolute inset-0 transition-opacity duration-200",
-						activeTab === "preview" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none",
+						"absolute inset-0",
+						activeTab === "preview"
+							? "z-10 opacity-100"
+							: "z-0 opacity-0 pointer-events-none",
 					)}
 				>
 					<PreviewPanel
@@ -169,77 +181,82 @@ function MobileEditorLayout() {
 
 				{/* Assets tab */}
 				{activeTab === "assets" && (
-					<div className="absolute inset-0 z-10 overflow-auto">
+					<div className="absolute inset-0 z-10 overflow-auto bg-background">
 						<AssetsPanel />
 					</div>
 				)}
 
-				{/* Timeline tab */}
+				{/* Timeline tab (full screen) */}
 				{activeTab === "timeline" && (
-					<div className="absolute inset-0 z-10 overflow-auto">
+					<div className="absolute inset-0 z-10 overflow-auto bg-background p-2">
 						<Timeline />
 					</div>
 				)}
 			</div>
 
-			{/* ── Properties panel — نیچے سے slide ─────────── */}
-			{/* Element select ہونے پر preview tab پر اوپر آئے */}
-			<div
-				className={cn(
-					"shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
-					hasSelection && activeTab === "preview"
-						? "h-[42vh] border-t border-border"
-						: "h-0",
-				)}
-			>
-				<PropertiesPanel />
-			</div>
+			{/* ── Properties panel — element select ہونے پر آئے ── */}
+			{activeTab === "preview" && (
+				<div
+					className={cn(
+						"shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-t border-border",
+						hasSelection ? "h-[40vh]" : "h-0",
+					)}
+				>
+					<PropertiesPanel />
+				</div>
+			)}
 
-			{/* ── Timeline strip (preview tab پر ہمیشہ دکھے) ─ */}
-			<div
-				className={cn(
-					"shrink-0 overflow-hidden transition-all duration-200",
-					activeTab === "preview" ? "h-[110px] border-t border-border" : "h-0",
-				)}
-			>
-				<div className="h-[110px] px-2 py-1">
+			{/* ── Timeline strip — preview tab پر نیچے ─────────── */}
+			{activeTab === "preview" && (
+				<div className="shrink-0 h-[100px] border-t border-border overflow-hidden">
 					<Timeline />
 				</div>
-			</div>
+			)}
 
-			{/* ── Bottom Tab Bar ────────────────────────────── */}
-			<nav
-				className="shrink-0 flex items-stretch justify-around h-14
-				           bg-background border-t border-border safe-area-bottom"
-			>
-				{TABS.map((tab) => (
-					<button
-						key={tab.id}
-						onClick={() => setActiveTab(tab.id)}
-						className={cn(
-							"flex flex-col items-center justify-center gap-0.5 flex-1",
-							"text-[10px] font-medium transition-colors active:bg-accent/40",
-							activeTab === tab.id ? "text-primary" : "text-muted-foreground",
-						)}
-					>
-						<span className="text-xl leading-none">{tab.emoji}</span>
-						<span>{tab.label}</span>
-						{activeTab === tab.id && (
-							<span className="w-4 h-0.5 rounded-full bg-primary" />
-						)}
-					</button>
-				))}
+			{/* ── Bottom Tab Bar — HugeIcons ───────────────────── */}
+			<nav className="shrink-0 flex items-stretch h-14 border-t border-border bg-background safe-area-bottom">
+				{MOBILE_TABS.map((tab) => {
+					const isActive = activeTab === tab.id;
+					return (
+						<button
+							key={tab.id}
+							onClick={() => setActiveTab(tab.id)}
+							className={cn(
+								"flex flex-col items-center justify-center gap-1 flex-1",
+								"transition-colors active:bg-accent/40",
+								isActive
+									? "text-primary"
+									: "text-muted-foreground",
+							)}
+						>
+							<HugeiconsIcon
+								icon={tab.icon}
+								className={cn(
+									"size-5 shrink-0",
+									isActive ? "text-primary" : "text-muted-foreground",
+								)}
+							/>
+							<span className="text-[10px] font-medium leading-none">
+								{tab.label}
+							</span>
+							{isActive && (
+								<span className="w-4 h-0.5 rounded-full bg-primary" />
+							)}
+						</button>
+					);
+				})}
 			</nav>
 		</div>
 	);
 }
 
 // ══════════════════════════════════════════════════════════════
-// DESKTOP LAYOUT — پرانا resizable layout
+// DESKTOP LAYOUT — بالکل پہلے جیسا
 // ══════════════════════════════════════════════════════════════
 function DesktopEditorLayout() {
 	usePasteMedia();
 	const { panels, setPanel } = usePanelStore();
+
 	const activeScene = useEditor((e) => e.scenes.getActiveSceneOrNull());
 	const currentTime = useEditor((e) => e.playback.getCurrentTime());
 	const activeGuide = usePreviewStore((s) => s.activeGuide);
@@ -281,7 +298,7 @@ function DesktopEditorLayout() {
 			className="size-full gap-[0.18rem]"
 			onLayout={(sizes) => {
 				setPanel({ panel: "mainContent", size: sizes[0] ?? panels.mainContent });
-				setPanel({ panel: "timeline", size: sizes[1] ?? panels.timeline });
+				setPanel({ panel: "timeline",    size: sizes[1] ?? panels.timeline });
 			}}
 		>
 			<ResizablePanel
@@ -299,44 +316,24 @@ function DesktopEditorLayout() {
 						setPanel({ panel: "properties", size: sizes[2] ?? panels.properties });
 					}}
 				>
-					<ResizablePanel
-						defaultSize={panels.tools}
-						minSize={15}
-						maxSize={40}
-						className="min-w-0"
-					>
+					<ResizablePanel defaultSize={panels.tools} minSize={15} maxSize={40} className="min-w-0">
 						<AssetsPanel />
 					</ResizablePanel>
-
 					<ResizableHandle withHandle />
-
-					<ResizablePanel
-						defaultSize={panels.preview}
-						minSize={30}
-						className="min-h-0 min-w-0 flex-1"
-					>
+					<ResizablePanel defaultSize={panels.preview} minSize={30} className="min-h-0 min-w-0 flex-1">
 						<PreviewPanel
 							overlayControls={overlayControls}
 							overlayInstances={overlaySource.instances}
 							onOverlayVisibilityChange={setOverlayVisibility}
 						/>
 					</ResizablePanel>
-
 					<ResizableHandle withHandle />
-
-					<ResizablePanel
-						defaultSize={panels.properties}
-						minSize={15}
-						maxSize={40}
-						className="min-w-0"
-					>
+					<ResizablePanel defaultSize={panels.properties} minSize={15} maxSize={40} className="min-w-0">
 						<PropertiesPanel />
 					</ResizablePanel>
 				</ResizablePanelGroup>
 			</ResizablePanel>
-
 			<ResizableHandle withHandle />
-
 			<ResizablePanel
 				defaultSize={panels.timeline}
 				minSize={15}
