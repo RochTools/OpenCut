@@ -34,17 +34,14 @@ import {
 	getBookmarkPreviewOverlaySource,
 } from "@/timeline/bookmarks/index";
 
-// ── موبائل Detect کرنے والا Hook ───────────────────────────
 function useIsMobile() {
 	const [isMobile, setIsMobile] = useState(false);
-
 	useEffect(() => {
 		const check = () => setIsMobile(window.innerWidth < 768);
 		check();
 		window.addEventListener("resize", check);
 		return () => window.removeEventListener("resize", check);
 	}, []);
-
 	return isMobile;
 }
 
@@ -75,7 +72,7 @@ function DegradedRendererBanner() {
 
 	return (
 		<div className="bg-accent border-b h-9 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-			<span>For the best experience, open OpenCut in Chrome.</span>
+			<span>For the best experience, open KokoCut in Chrome.</span>
 			<Button
 				variant="text"
 				size="icon"
@@ -89,14 +86,13 @@ function DegradedRendererBanner() {
 	);
 }
 
-// ── موبائل Tabs ──────────────────────────────────────────────
 type MobileTab = "preview" | "assets" | "properties" | "timeline";
 
 const MOBILE_TABS: { id: MobileTab; label: string; emoji: string }[] = [
-	{ id: "assets", label: "Assets", emoji: "🎬" },
-	{ id: "preview", label: "Preview", emoji: "▶️" },
-	{ id: "properties", label: "Props", emoji: "⚙️" },
-	{ id: "timeline", label: "Timeline", emoji: "📊" },
+	{ id: "assets",     label: "Assets",   emoji: "🎬" },
+	{ id: "preview",    label: "Preview",  emoji: "▶️" },
+	{ id: "properties", label: "Props",    emoji: "⚙️" },
+	{ id: "timeline",   label: "Timeline", emoji: "📊" },
 ];
 
 function MobileEditorLayout() {
@@ -140,7 +136,6 @@ function MobileEditorLayout() {
 
 	return (
 		<div className="flex flex-col size-full bg-background">
-			{/* Content Area */}
 			<div className="flex-1 min-h-0 overflow-hidden">
 				{activeTab === "preview" && (
 					<div className="size-full">
@@ -168,21 +163,24 @@ function MobileEditorLayout() {
 				)}
 			</div>
 
-			{/* Bottom Tab Bar */}
+			{/* Bottom Tab Bar - CapCut style */}
 			<div className="flex-shrink-0 border-t border-border bg-background safe-area-bottom">
 				<div className="flex items-center justify-around h-14">
 					{MOBILE_TABS.map((tab) => (
 						<button
 							key={tab.id}
 							onClick={() => setActiveTab(tab.id)}
-							className={`flex flex-col items-center justify-center gap-0.5 w-full h-full text-[10px] transition-colors ${
+							className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] font-medium transition-colors active:bg-accent/50 ${
 								activeTab === tab.id
 									? "text-primary"
 									: "text-muted-foreground"
 							}`}
 						>
-							<span className="text-lg">{tab.emoji}</span>
+							<span className="text-xl leading-none">{tab.emoji}</span>
 							<span>{tab.label}</span>
+							{activeTab === tab.id && (
+								<span className="w-4 h-0.5 rounded-full bg-primary mt-0.5" />
+							)}
 						</button>
 					))}
 				</div>
@@ -191,7 +189,6 @@ function MobileEditorLayout() {
 	);
 }
 
-// ── Desktop Layout (پرانا) ──────────────────────────────────
 function DesktopEditorLayout() {
 	usePasteMedia();
 	const { panels, setPanel } = usePanelStore();
@@ -274,17 +271,7 @@ function DesktopEditorLayout() {
 	);
 }
 
-// ── Layout Switch ───────────────────────────────────────────
 function EditorLayout() {
 	const isMobile = useIsMobile();
-
-	if (isMobile === null) {
-		return (
-			<div className="size-full flex items-center justify-center bg-background">
-				<div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
-			</div>
-		);
-	}
-
 	return isMobile ? <MobileEditorLayout /> : <DesktopEditorLayout />;
 }
