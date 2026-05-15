@@ -50,7 +50,6 @@ import { StickersView } from "@/stickers/components/assets-view";
 import { TextView } from "@/text/components/assets-view";
 import { EffectsView } from "@/effects/components/assets-view";
 
-// ── View map ──────────────────────────────────────────────────
 function useViewMap(): Record<Tab, React.ReactNode> {
 	return {
 		media:       <MediaView />,
@@ -112,18 +111,18 @@ function EditorLayout() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// MOBILE LAYOUT — بالکل InShot جیسا، سب ایک screen پر
+// MOBILE LAYOUT — InShot style، سب ایک screen پر
 //
 // ┌─────────────────────────────┐
-// │        Preview              │ ← 38vh
+// │   Preview      (~38vh)      │
 // ├─────────────────────────────┤
-// │   Properties (slide up)     │ ← element select پر
+// │   Properties   (slide up)   │ ← element select پر
 // ├─────────────────────────────┤
-// │        Timeline             │ ← 140px، ہمیشہ
+// │   Timeline     (170px)      │ ← اونچی strip، thumbnails نظر آئیں
 // ├─────────────────────────────┤
-// │ [🎬][🔊][T][★][✨][⚙]     │ ← HugeIcons horizontal scroll
+// │   Tools bar    (HugeIcons)  │
 // ├─────────────────────────────┤
-// │      Panel content          │ ← flex-1، scroll کریں
+// │   Panel content (flex-1)    │
 // └─────────────────────────────┘
 // ══════════════════════════════════════════════════════════════
 function MobileEditorLayout() {
@@ -171,8 +170,8 @@ function MobileEditorLayout() {
 	return (
 		<div className="flex flex-col w-full h-full bg-background overflow-hidden">
 
-			{/* ① Preview — اوپر ──────────────────────────────── */}
-			<div className="shrink-0" style={{ height: "38vh" }}>
+			{/* ① Preview ──────────────────────────────────────── */}
+			<div className="shrink-0 bg-black" style={{ height: "38vh" }}>
 				<PreviewPanel
 					overlayControls={overlayControls}
 					overlayInstances={overlaySource.instances}
@@ -180,27 +179,29 @@ function MobileEditorLayout() {
 				/>
 			</div>
 
-			{/* ② Properties — element select ہونے پر آئے ──────── */}
+			{/* ② Properties — element select پر slide up ──────── */}
 			<div
 				className={cn(
-					"shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-t border-border",
-					hasSelection ? "h-[32vh]" : "h-0",
+					"shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
+					hasSelection
+						? "h-[30vh] border-t border-border"
+						: "h-0",
 				)}
 			>
 				<PropertiesPanel />
 			</div>
 
-			{/* ③ Timeline — ہمیشہ درمیان میں ──────────────────── */}
+			{/* ③ Timeline — اونچی، thumbnails صاف نظر آئیں ──── */}
 			<div
 				className="shrink-0 border-t border-border bg-background overflow-hidden"
-				style={{ height: "140px" }}
+				style={{ height: "170px" }}
 			>
 				<Timeline />
 			</div>
 
-			{/* ④ Tools horizontal tab bar — HugeIcons ────────── */}
+			{/* ④ Tools — HugeIcons horizontal scroll ─────────── */}
 			<div className="shrink-0 border-t border-border bg-background overflow-x-auto scrollbar-hidden">
-				<div className="flex items-center gap-1 px-2 py-1.5 w-max">
+				<div className="flex items-center gap-1 px-2 py-2 w-max">
 					{TAB_KEYS.map((tabKey) => {
 						const tab = tabs[tabKey];
 						const isActive = activeTab === tabKey;
@@ -211,23 +212,23 @@ function MobileEditorLayout() {
 								aria-label={tab.label}
 								className={cn(
 									"flex flex-col items-center justify-center gap-1",
-									"w-14 py-2 rounded-lg shrink-0 transition-colors",
+									"w-[3.8rem] py-2 rounded-lg shrink-0 transition-colors",
 									isActive
 										? "bg-secondary text-secondary-foreground"
 										: "text-muted-foreground hover:bg-accent",
 								)}
 							>
-								<tab.icon className="size-5" />
-								<span className="text-[0.6rem] leading-none font-medium">
+								<tab.icon className="size-[1.3rem]" />
+								<span className="text-[0.62rem] leading-none font-medium">
 									{tab.label}
 								</span>
-							</button>
+						</button>
 						);
 					})}
 				</div>
 			</div>
 
-			{/* ⑤ Panel content — نیچے، flex-1 ─────────────────── */}
+			{/* ⑤ Panel content ────────────────────────────────── */}
 			<div className="flex-1 min-h-0 overflow-y-auto bg-background">
 				{viewMap[activeTab]}
 			</div>
@@ -287,7 +288,12 @@ function DesktopEditorLayout() {
 				setPanel({ panel: "timeline",    size: sizes[1] ?? panels.timeline });
 			}}
 		>
-			<ResizablePanel defaultSize={panels.mainContent} minSize={30} maxSize={85} className="min-h-0">
+			<ResizablePanel
+				defaultSize={panels.mainContent}
+				minSize={30}
+				maxSize={85}
+				className="min-h-0"
+			>
 				<ResizablePanelGroup
 					direction="horizontal"
 					className="size-full gap-[0.19rem] px-3"
@@ -315,7 +321,12 @@ function DesktopEditorLayout() {
 				</ResizablePanelGroup>
 			</ResizablePanel>
 			<ResizableHandle withHandle />
-			<ResizablePanel defaultSize={panels.timeline} minSize={15} maxSize={70} className="min-h-0 px-3 pb-3">
+			<ResizablePanel
+				defaultSize={panels.timeline}
+				minSize={15}
+				maxSize={70}
+				className="min-h-0 px-3 pb-3"
+			>
 				<Timeline />
 			</ResizablePanel>
 		</ResizablePanelGroup>
