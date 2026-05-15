@@ -1,17 +1,17 @@
 import type { TrackType } from "@/timeline";
 
-// موبائل پر چھوٹی track heights
-function isMobileDevice(): boolean {
-	if (typeof window === "undefined") return false;
-	return window.innerWidth < 768;
-}
+// ── موبائل detect ─────────────────────────────────────────────
+const IS_MOBILE =
+	typeof window !== "undefined" && window.innerWidth < 768;
 
+// ── Track heights ─────────────────────────────────────────────
+// موبائل پر video track اونچی کریں تاکہ thumbnails صاف نظر آئیں
 export const TIMELINE_TRACK_HEIGHTS_PX: Record<TrackType, number> = {
-	video: 65,
-	text: 25,
-	audio: 50,
-	graphic: 25,
-	effect: 25,
+	video:   IS_MOBILE ? 80 : 65,  // موبائل پر 80px
+	text:    IS_MOBILE ? 32 : 25,
+	audio:   IS_MOBILE ? 56 : 50,
+	graphic: IS_MOBILE ? 32 : 25,
+	effect:  IS_MOBILE ? 32 : 25,
 } as const;
 
 export const KEYFRAME_LANE_HEIGHT_PX = 20;
@@ -20,10 +20,10 @@ export const EXPANDED_GROUP_HEADER_HEIGHT_PX = 18;
 
 export const TIMELINE_TRACK_GAP_PX = 6;
 
-// موبائل پر 48px — desktop پر 112px
-// یہ بائیں طرف track controls کی width ہے
+// ── Track labels column ───────────────────────────────────────
+// موبائل پر بائیں طرف کم جگہ تاکہ timeline زیادہ چوڑی ہو
 export const TIMELINE_TRACK_LABELS_COLUMN_WIDTH_PX =
-	typeof window !== "undefined" && window.innerWidth < 768 ? 48 : 112;
+	IS_MOBILE ? 40 : 112;
 
 export const TIMELINE_RULER_HEIGHT_PX = 22;
 export const TIMELINE_BOOKMARK_ROW_HEIGHT_PX = 16;
